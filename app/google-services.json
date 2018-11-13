@@ -1,0 +1,54 @@
+{"project_info": {
+    "project_number": "95711793340",
+    "firebase_url": "https://dhishna-test.firebaseio.com",
+    "project_id": "dhishna-test",
+    "storage_bucket": "dhishna-test.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:95711793340:android:bbc653aa6ccc6ffc",
+        "android_client_info": {
+          "package_name": "com.example.jyothisp.dhishna"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "95711793340-uu3hltrbdj4f9g8og6p9k7lm3m1duujo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.jyothisp.dhishna",
+            "certificate_hash": "819cf20c9711eb0c9c7f81faced297ec5045901a"
+          }
+        },
+        {
+          "client_id": "95711793340-fht9k7rcegvtmrm98u6ghpqnf3t8l3b0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAEjO1GPA6x215nZQrPnSYk_Zo1vRXaUg"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "95711793340-fht9k7rcegvtmrm98u6ghpqnf3t8l3b0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

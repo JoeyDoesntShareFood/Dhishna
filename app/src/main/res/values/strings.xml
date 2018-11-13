@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Dhishna</string>
+
+    <string name="Facebook">Facebook</string>
+    <string name="Google">Google</string>
+
+    <string name="facebook_app_id">498642083963473</string>
+    <string name="fb_login_protocol_scheme">fb498642083963473</string>
+</resources>

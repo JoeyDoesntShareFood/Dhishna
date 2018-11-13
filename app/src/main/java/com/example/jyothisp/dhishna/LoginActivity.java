@@ -61,7 +61,6 @@ public class LoginActivity extends AppCompatActivity {
         mFacebookButton = (Button) findViewById(R.id.fb_sign_in_btn);
 
 
-        //================================Google====================================================
         /**
          * Setting up Google sign in.
          */
@@ -80,7 +79,6 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
-        //==========================================================================================
 
 
         /**

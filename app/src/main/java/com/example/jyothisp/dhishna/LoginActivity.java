@@ -26,25 +26,29 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.auth.UserProfileChangeRequest;
 
 import java.util.Arrays;
 
 public class LoginActivity extends AppCompatActivity {
 
     private TextView mTextView;
-    private Button mFacebookButton, mGoogleButton;
+    private Button mFacebookButton, mGoogleButton, mEmailButton;
 
     private FirebaseAuth mAuth;
 
 
     private int RC_GOOGLE_SIGN_IN = 1;
+    private int RC_EMAIL_SIGN_IN = 2;
     private CallbackManager mCallbackManager;
 
     private static final String EMAIL = "email";
@@ -59,7 +63,9 @@ public class LoginActivity extends AppCompatActivity {
         mTextView = (TextView) findViewById(R.id.textView);
         mGoogleButton = (Button) findViewById(R.id.google_sign_in_btn);
         mFacebookButton = (Button) findViewById(R.id.fb_sign_in_btn);
+        mEmailButton = (Button) findViewById(R.id.email_sign_in_btn);
 
+        mAuth = FirebaseAuth.getInstance();
 
         /**
          * Setting up Google sign in.
@@ -120,6 +126,17 @@ public class LoginActivity extends AppCompatActivity {
         });
 
 
+        /**
+         * Setting up Email Registration.
+         */
+        mEmailButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(LoginActivity.this, EmailLoginActivity.class);
+                startActivityForResult(intent,RC_EMAIL_SIGN_IN);
+            }
+        });
+
     }
 
 
@@ -127,17 +144,15 @@ public class LoginActivity extends AppCompatActivity {
      * Function to update the UI (duh!) with the details of the user.
      * TODO: replace function logic such that the app goes to the registration field and auto-fills the data that you've got.
      */
-    private void updateUI() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+    private void updateUI(FirebaseUser user) {
+//        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             String name = user.getDisplayName();
             String email = user.getEmail();
-            String photoUrl = user.getPhotoUrl().toString();
             String displayString = "Name: " + name + "\n"
                     + "Email ID: " + email + "\n";
             Log.v(LOG_TAG, name);
             Log.v(LOG_TAG, email);
-            Log.v(LOG_TAG, photoUrl);
 
             mGoogleButton.setVisibility(View.GONE);
             mFacebookButton.setVisibility(View.GONE);
@@ -160,7 +175,7 @@ public class LoginActivity extends AppCompatActivity {
         /**
          * For the Google sign in result.
          */
-        if (requestCode == 1) {
+        if (requestCode == RC_GOOGLE_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
@@ -168,6 +183,51 @@ public class LoginActivity extends AppCompatActivity {
             } catch (Exception e) {
                 Toast.makeText(LoginActivity.this, "Authentication failed.",
                         Toast.LENGTH_SHORT).show();
+            }
+
+        }
+
+        /**
+         *  For the email reg. result.
+         */
+        if (requestCode == RC_EMAIL_SIGN_IN){
+            if (resultCode == RESULT_OK && data!=null){
+
+                String email = data.getStringExtra("email");
+                String name = data.getStringExtra("name");
+                String phone = data.getStringExtra("phone");
+                String password = data.getStringExtra("password");
+                final UserProfileChangeRequest request = new UserProfileChangeRequest.Builder()
+                        .setDisplayName(name)
+                        .build();
+                mAuth.createUserWithEmailAndPassword(email, password)
+                        .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                            @Override
+                            public void onComplete(@NonNull Task<AuthResult> task) {
+                                if (task.isSuccessful()) {
+                                    // Sign in success, update UI with the signed-in user's information
+                                    Log.d(LOG_TAG, "createUserWithEmail:success");
+                                    FirebaseUser user = mAuth.getCurrentUser();
+                                    user.updateProfile(request)
+                                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                                @Override
+                                                public void onComplete(@NonNull Task<Void> task) {
+                                                    FirebaseUser updatedUser = mAuth.getCurrentUser();
+                                                    updateUI(updatedUser);
+                                                }
+                                            });
+                                } else {
+                                    // If sign in fails, display a message to the user.
+                                    Log.w(LOG_TAG, "createUserWithEmail:failure", task.getException());
+
+                                    Toast.makeText(LoginActivity.this, "Authentication failed.",
+                                            Toast.LENGTH_SHORT).show();
+                                    updateUI(null);
+                                }
+
+                                // ...
+                            }
+                        });
             }
 
         }
@@ -182,7 +242,7 @@ public class LoginActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null)
-            updateUI();
+            updateUI(currentUser);
     }
 
 
@@ -210,7 +270,8 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(LoginActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                         } else {
-                            updateUI();
+                            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                            updateUI(user);
 
                         }
                     }
@@ -238,7 +299,8 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(LoginActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                         } else {
-                            updateUI();
+                            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                            updateUI(user);
                         }
                     }
                 });

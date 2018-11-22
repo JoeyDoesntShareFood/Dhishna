@@ -1,14 +1,21 @@
 package com.example.jyothisp.dhishna;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.drawable.Animatable;
+import android.graphics.drawable.Drawable;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.graphics.drawable.Animatable2Compat;
+import android.support.graphics.drawable.AnimatedVectorDrawableCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,34 +33,46 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Arrays;
 
 public class LoginActivity extends AppCompatActivity {
 
     private TextView mTextView;
-    private Button mFacebookButton, mGoogleButton, mEmailButton;
+    private Button mFacebookButton, mGoogleButton, mRegisterButton, mEmailSignUpButton;
+
+    private ImageView mProgressView;
+    private TextView mProgressTextView;
+    private View mLoginFormView;
+
 
     private FirebaseAuth mAuth;
 
 
     private int RC_GOOGLE_SIGN_IN = 1;
+    private int RC_REGISTER = 3;
     private int RC_EMAIL_SIGN_IN = 2;
     private CallbackManager mCallbackManager;
 
     private static final String EMAIL = "email";
     private static final String PUBLIC_PROFILE = "public_profile";
     private static final String LOG_TAG = "LoginActivity";
+    private static final String ACTIVITY_MODE = "ACTIVITY_MODE";
+    private static final boolean ACTIVITY_EMAIL_CREATE = true;
+    private static final boolean ACTIVITY_REGISTER = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +82,13 @@ public class LoginActivity extends AppCompatActivity {
         mTextView = (TextView) findViewById(R.id.textView);
         mGoogleButton = (Button) findViewById(R.id.google_sign_in_btn);
         mFacebookButton = (Button) findViewById(R.id.fb_sign_in_btn);
-        mEmailButton = (Button) findViewById(R.id.email_sign_in_btn);
+        mRegisterButton = (Button) findViewById(R.id.email_sign_up_btn);
+        mEmailSignUpButton = (Button) findViewById(R.id.email_sign_in_btn);
+        mLoginFormView = findViewById(R.id.login_form);
+        mProgressView = (ImageView) findViewById(R.id.login_progress);
+        mProgressTextView = (TextView) findViewById(R.id.text_progress);
+
+        Button RefreshButton = (Button) findViewById(R.id.refresh_btn);
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -80,11 +105,12 @@ public class LoginActivity extends AppCompatActivity {
         mGoogleButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                mProgressTextView.setText("Logging in with Google");
+                showProgress(true);
                 Intent intent = mGoogleSignInClient.getSignInIntent();
                 startActivityForResult(intent, RC_GOOGLE_SIGN_IN);
             }
         });
-
 
 
         /**
@@ -99,11 +125,9 @@ public class LoginActivity extends AppCompatActivity {
                 new FacebookCallback<LoginResult>() {
                     @Override
                     public void onSuccess(LoginResult loginResult) {
-                        //Facebook login success.
+                        mProgressTextView.setText("Integrating with Firebase");
                         firebaseAuthWithFacebook(loginResult.getAccessToken());     //Integrating with FirebaseAuth.
 
-
-                        //Code for what to do when user logged in goes here.
                     }
 
                     @Override
@@ -120,6 +144,8 @@ public class LoginActivity extends AppCompatActivity {
         mFacebookButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                mProgressTextView.setText("Logging in with FB");
+                showProgress(true);
                 LoginManager.getInstance().logInWithReadPermissions(activity, Arrays.asList(
                         PUBLIC_PROFILE, EMAIL));
             }
@@ -127,40 +153,28 @@ public class LoginActivity extends AppCompatActivity {
 
 
         /**
-         * Setting up Email Registration.
+         * Setting up new Email Registration.
          */
-        mEmailButton.setOnClickListener(new View.OnClickListener() {
+        mRegisterButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(LoginActivity.this, EmailLoginActivity.class);
-                startActivityForResult(intent,RC_EMAIL_SIGN_IN);
+                intent.putExtra(ACTIVITY_MODE, ACTIVITY_EMAIL_CREATE);
+                startActivityForResult(intent, RC_EMAIL_SIGN_IN);
+            }
+        });
+
+
+        RefreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                FirebaseUser user = mAuth.getCurrentUser();
+                user.reload();
+                mTextView.setText("" + user.isEmailVerified());
             }
         });
 
     }
-
-
-    /**
-     * Function to update the UI (duh!) with the details of the user.
-     * TODO: replace function logic such that the app goes to the registration field and auto-fills the data that you've got.
-     */
-    private void updateUI(FirebaseUser user) {
-//        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            String name = user.getDisplayName();
-            String email = user.getEmail();
-            String displayString = "Name: " + name + "\n"
-                    + "Email ID: " + email + "\n";
-            Log.v(LOG_TAG, name);
-            Log.v(LOG_TAG, email);
-
-            mGoogleButton.setVisibility(View.GONE);
-            mFacebookButton.setVisibility(View.GONE);
-            mTextView.setText(displayString);
-        }
-    }
-
-
 
 
     @Override
@@ -178,6 +192,8 @@ public class LoginActivity extends AppCompatActivity {
         if (requestCode == RC_GOOGLE_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
+
+                mProgressTextView.setText("Integrating with Firebase");
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account);
             } catch (Exception e) {
@@ -190,61 +206,17 @@ public class LoginActivity extends AppCompatActivity {
         /**
          *  For the email reg. result.
          */
-        if (requestCode == RC_EMAIL_SIGN_IN){
-            if (resultCode == RESULT_OK && data!=null){
-
-                String email = data.getStringExtra("email");
-                String name = data.getStringExtra("name");
-                String phone = data.getStringExtra("phone");
-                String password = data.getStringExtra("password");
-                final UserProfileChangeRequest request = new UserProfileChangeRequest.Builder()
-                        .setDisplayName(name)
-                        .build();
-                mAuth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                            @Override
-                            public void onComplete(@NonNull Task<AuthResult> task) {
-                                if (task.isSuccessful()) {
-                                    // Sign in success, update UI with the signed-in user's information
-                                    Log.d(LOG_TAG, "createUserWithEmail:success");
-                                    FirebaseUser user = mAuth.getCurrentUser();
-                                    user.updateProfile(request)
-                                            .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                                @Override
-                                                public void onComplete(@NonNull Task<Void> task) {
-                                                    FirebaseUser updatedUser = mAuth.getCurrentUser();
-                                                    updateUI(updatedUser);
-                                                }
-                                            });
-                                } else {
-                                    // If sign in fails, display a message to the user.
-                                    Log.w(LOG_TAG, "createUserWithEmail:failure", task.getException());
-
-                                    Toast.makeText(LoginActivity.this, "Authentication failed.",
-                                            Toast.LENGTH_SHORT).show();
-                                    updateUI(null);
-                                }
-
-                                // ...
-                            }
-                        });
+        if (requestCode == RC_EMAIL_SIGN_IN) {
+            if (resultCode == RESULT_OK) {
+                //Email Sign in success.
+                //TODO: do stuff.
             }
 
         }
-    }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        /**
-         * Loads the user from the app cache.
-         */
-        mAuth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null)
-            updateUI(currentUser);
+        if (requestCode == RC_REGISTER)
+            showProgress(false);
     }
-
 
 
     /**
@@ -266,12 +238,14 @@ public class LoginActivity extends AppCompatActivity {
 
                         //Alert the user if the Login attempt was unsuccessful.
                         if (!task.isSuccessful()) {
+                            showProgress(false);
                             Log.w(LOG_TAG, "signInWithCredential", task.getException());
                             Toast.makeText(LoginActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                         } else {
+                            mProgressTextView.setText("Getting ready to collect data");
                             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                            updateUI(user);
+                            pushUserDetailsToDB(user);
 
                         }
                     }
@@ -281,7 +255,6 @@ public class LoginActivity extends AppCompatActivity {
 
     /**
      * Function to integrate the Facebook login with FirebaseAuth.
-     *
      * @param acct . object containing details of the current user account.
      */
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
@@ -293,16 +266,88 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         Log.d(LOG_TAG, "signInWithCredential:onComplete:" + task.isSuccessful());
-
+                        showProgress(false);
                         if (!task.isSuccessful()) {
                             Log.w(LOG_TAG, "signInWithCredential", task.getException());
                             Toast.makeText(LoginActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                         } else {
+                            mProgressTextView.setText("Getting ready to collect data");
+                            showProgress(true);
                             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                            updateUI(user);
+                            pushUserDetailsToDB(user);
                         }
                     }
                 });
+    }
+
+    /**
+     * Shows the progress UI and hides the login form.
+     * @param show boolean dictating whether or not the progress animation should be shown.
+     */
+    private void showProgress(final boolean show) {
+        int shortAnimTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
+        mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+        mLoginFormView.animate().setDuration(shortAnimTime).alpha(
+                show ? 0 : 1).setListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+            }
+        });
+        mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
+        mProgressTextView.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show){
+            AnimatedVectorDrawableCompat avd = AnimatedVectorDrawableCompat.create(this, R.drawable.logo_loading_vector);
+            mProgressView.setImageDrawable(avd);
+            final Animatable animatable = (Animatable) mProgressView.getDrawable();
+            animatable.start();
+            avd.registerAnimationCallback(new Animatable2Compat.AnimationCallback() {
+                @Override
+                public void onAnimationEnd(Drawable drawable) {
+                    if (show)
+                        animatable.start();
+                    else {
+                        mProgressView.setVisibility(View.GONE);
+                        mProgressTextView.setVisibility(View.GONE);
+                    }
+                }
+            });
+        }
+
+
+    }
+
+
+    /**
+     * Function that checks if the data of the user is stored in the Database.
+     * If not, it sends an intent to collect the data from the user and push it to the database.
+     *
+     * @param user Object containing the currently signed in user.
+     */
+    private void pushUserDetailsToDB(final FirebaseUser user) {
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        final DatabaseReference reference = database.getReference("users");
+        reference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (!dataSnapshot.child(user.getUid()).exists()) {
+                    Intent intent = new Intent(LoginActivity.this, EmailLoginActivity.class);
+                    String name, email;
+                    name = user.getDisplayName();
+                    email = user.getEmail();
+                    intent.putExtra("name", name);
+                    intent.putExtra("email", email);
+                    intent.putExtra(ACTIVITY_MODE, ACTIVITY_REGISTER);
+                    startActivityForResult(intent, RC_REGISTER);
+                } else
+                    showProgress(false);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
     }
 }

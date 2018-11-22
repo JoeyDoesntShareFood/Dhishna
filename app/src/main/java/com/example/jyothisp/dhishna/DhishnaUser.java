@@ -1,29 +1,35 @@
 package com.example.jyothisp.dhishna;
 
 public class DhishnaUser {
-    private String mName, mEmail, mPhone;
-    private int mGender; // 1=male, 2=female.
+    private String Name, Email, Phone;
+    private String Gender; // M=male, F=female.
+    private String Institute;
 
-    public DhishnaUser(String name, String email, String phone, int gender){
-        mName = name;
-        mEmail = email;
-        mPhone = phone;
-        mGender = gender;
+    public DhishnaUser(String name, String email, String phone, String gender, String institute){
+        Name = name;
+        Email = email;
+        Phone = phone;
+        Gender = gender;
+        Institute = institute;
     }
 
-    public String getmName() {
-        return mName;
+    public String getName() {
+        return Name;
     }
 
-    public String getmEmail() {
-        return mEmail;
+    public String getEmail() {
+        return Email;
     }
 
-    public String getmPhone() {
-        return mPhone;
+    public String getPhone() {
+        return Phone;
     }
 
-    public int getmGender() {
-        return mGender;
+    public String getGender() {
+        return Gender;
+    }
+
+    public String getInstitute() {
+        return Institute;
     }
 }

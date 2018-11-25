@@ -54,6 +54,9 @@ public class EmailLoginActivity extends Activity {
     private View mLoginFormView;
     private ImageView mProgressView;
     private TextView mProgressTextView;
+    private ImageView mReloadIcon;
+
+    private FirebaseUser firebaseUser;
 
     private static final String LOG_TAG = "EmailLoginActivity";
     private static final String ACTIVITY_MODE = "ACTIVITY_MODE";
@@ -64,7 +67,7 @@ public class EmailLoginActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_email_login);
 
-        // Set up the login form.
+        // Set up the UI elements.
         mNameView = (EditText) findViewById(R.id.name);
         mPhoneView = (EditText) findViewById(R.id.phone);
         mPasswordView = (EditText) findViewById(R.id.password);
@@ -74,8 +77,7 @@ public class EmailLoginActivity extends Activity {
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = (ImageView) findViewById(R.id.login_progress);
         mProgressTextView = (TextView) findViewById(R.id.text_progress);
-
-        final boolean hasPassword = getIntent().getBooleanExtra(ACTIVITY_MODE, true);
+        mReloadIcon = (ImageView) findViewById(R.id.reload);
 
 
         //If the User is login in via one of the providers, we fetch their name and email ID.
@@ -86,12 +88,14 @@ public class EmailLoginActivity extends Activity {
         String email = getIntent().getStringExtra("email");
         if (email != null) {
             mEmailView.setText(email);
-            mEmailView.setInputType(InputType.TYPE_NULL);
+            mEmailView.setInputType(InputType.TYPE_NULL);       //They shouldn't be allowed to change the emailID from here.
             mNameView.requestFocus();
         }
 
 
         //The password field only needs to be active when the user is creating a new account.
+        final boolean hasPassword = getIntent().getBooleanExtra(ACTIVITY_MODE, true);
+
         if (!hasPassword)
             mPasswordView.setVisibility(View.INVISIBLE);
         else {
@@ -123,6 +127,8 @@ public class EmailLoginActivity extends Activity {
      * Attempts to sign in or register the account specified by the login form.
      * If there are form errors (invalid email, missing fields, etc.), the
      * errors are presented and no actual login attempt is made.
+     *
+     * @param hasPassword this is true only for the case of a new Registration.
      */
     private void attemptRegistration(boolean hasPassword) {
 
@@ -169,7 +175,6 @@ public class EmailLoginActivity extends Activity {
         }
 
         //Check if name and phone number entered.
-        // Check for a valid email address.
         if (TextUtils.isEmpty(name)) {
             mNameView.setError(getString(R.string.error_field_required));
             focusView = mEmailView;
@@ -191,11 +196,12 @@ public class EmailLoginActivity extends Activity {
             // form field with an error.
             focusView.requestFocus();
         } else {
+
             final DhishnaUser dhishnaUser = new DhishnaUser(name, email, phone, gender, institute);
 
             if (hasPassword)
-                createEmailAccount(name, email, password, dhishnaUser);
-            else{
+                createEmailAccount(password, dhishnaUser);
+            else {
                 mProgressTextView.setText("Pushing to Database");
                 pushToDBandExit(dhishnaUser);
             }
@@ -203,52 +209,83 @@ public class EmailLoginActivity extends Activity {
         }
     }
 
-    private void createEmailAccount(String name, String email, String password, final DhishnaUser dhishnaUser) {
+
+    /**
+     * Function which handles creating a new account with emailID and password.
+     *
+     * @param password    Password.
+     * @param dhishnaUser A user object which contains the details of the user.
+     */
+    private void createEmailAccount(String password, final DhishnaUser dhishnaUser) {
+
         final FirebaseAuth mAuth = FirebaseAuth.getInstance();
-        final UserProfileChangeRequest request = new UserProfileChangeRequest.Builder()
-                .setDisplayName(name)
-                .build();
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(LOG_TAG, "createUserWithEmail:success");
-                            final FirebaseUser user = mAuth.getCurrentUser();
-                            final OnCompleteListener<Void> listener = new OnCompleteListener<Void>() {
-                                @Override
-                                public void onComplete(@NonNull Task<Void> task) {
-                                    if (task.isSuccessful()) {
-                                        Toast.makeText(EmailLoginActivity.this, "Email Verification Sent", Toast.LENGTH_SHORT).show();
-                                        mProgressTextView.setText("Email Verification Link sent. Pushing to DB");
-                                        pushToDBandExit(dhishnaUser);
-                                    }
-                                }
-                            };
-                            user.updateProfile(request)
-                                    .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                        @Override
-                                        public void onComplete(@NonNull Task<Void> task) {
-                                            user.sendEmailVerification().addOnCompleteListener(listener);
-//                                            showProgress(false);
-                                            mProgressTextView.setText("Sending verification Email");
-                                        }
-                                    });
-                            mProgressTextView.setText("Updating account");
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(LOG_TAG, "createUserWithEmail:failure", task.getException());
 
-                            Toast.makeText(EmailLoginActivity.this, "Authentication failed.",
-                                    Toast.LENGTH_SHORT).show();
-                            setResult(RESULT_CANCELED);
-                            finish();
+
+        /**
+         * A listener which listens for when the verification email is sent
+         * and waits for the user to go verify it.
+         * When the mail is verified, the user details are pushed into the DB.
+         */
+        final OnCompleteListener<Void> verificationEmailListener = new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()) {
+                    Log.d(LOG_TAG, "emailVerification: Verification link sent");
+                    mProgressTextView.setText("Email Verification Link sent. Open your email and click the link. Then click below to complete your registration.");
+                    mReloadIcon.setVisibility(View.VISIBLE);
+                    mReloadIcon.setOnClickListener(new OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            firebaseUser.reload();
+                            Log.d(LOG_TAG, "emailVerification: Reloading");
+                            if (firebaseUser.isEmailVerified()) {
+                                mReloadIcon.setVisibility(View.GONE);
+                                Log.d(LOG_TAG, "emailVerification: Email verified.");
+                                mProgressTextView.setText("Pushing to DB");
+                                pushToDBandExit(dhishnaUser);
+                            } else {
+                                Log.d(LOG_TAG, "emailVerification: Email still not verified.");
+                                Toast.makeText(EmailLoginActivity.this, "Click the link in your mail.", Toast.LENGTH_SHORT).show();
+                            }
                         }
+                    });
+                } else {
+                    Log.d(LOG_TAG, "emailVerification: Verification email not sent.");
+                }
+            }
+        };
 
-                        // ...
-                    }
-                });
+        /**
+         * A listener which listens for when the Firebase account has been created.
+         * Verifies email upon successful completion.
+         */
+        OnCompleteListener<AuthResult> accountCreationListener = new OnCompleteListener<AuthResult>() {
+            @Override
+            public void onComplete(@NonNull Task<AuthResult> task) {
+                if (task.isSuccessful()) {
+
+                    //Firebase account has been successfully created.
+                    Log.d(LOG_TAG, "createUserWithEmail:success");
+                    firebaseUser = mAuth.getCurrentUser();
+
+                    //Sending the verification Email.
+                    mProgressTextView.setText("Sending Verification email.");
+                    firebaseUser.sendEmailVerification().addOnCompleteListener(verificationEmailListener);
+                } else {
+                    // If sign in fails, display a message to the user.
+                    Log.w(LOG_TAG, "createUserWithEmail:failure", task.getException());
+
+                    Toast.makeText(EmailLoginActivity.this, "Authentication failed.",
+                            Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_CANCELED);
+                    finish();
+                }
+            }
+        };
+
+
+        mAuth.createUserWithEmailAndPassword(dhishnaUser.getEmail(), password)
+                .addOnCompleteListener(this, accountCreationListener);
         showProgress(true);
         mProgressTextView.setText("Creating account");
 

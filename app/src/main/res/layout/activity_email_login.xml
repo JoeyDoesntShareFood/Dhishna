@@ -29,6 +29,14 @@
         android:textSize="16sp"
         android:visibility="gone"/>
 
+    <ImageView
+        android:id="@+id/reload"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:background="@android:drawable/screen_background_dark_transparent"
+        android:src="@android:drawable/ic_popup_sync" />
+
 
     <ScrollView
         android:id="@+id/login_form"

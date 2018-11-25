@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,7 +41,6 @@ import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
-import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -51,10 +51,10 @@ import java.util.Arrays;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private TextView mTextView;
-    private Button mFacebookButton, mGoogleButton, mRegisterButton, mEmailSignUpButton;
 
     private ImageView mProgressView;
+    private EditText mEmailEditText;
+    private EditText mPasswordEditText;
     private TextView mProgressTextView;
     private View mLoginFormView;
 
@@ -79,16 +79,16 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        mTextView = (TextView) findViewById(R.id.textView);
-        mGoogleButton = (Button) findViewById(R.id.google_sign_in_btn);
-        mFacebookButton = (Button) findViewById(R.id.fb_sign_in_btn);
-        mRegisterButton = (Button) findViewById(R.id.email_sign_up_btn);
-        mEmailSignUpButton = (Button) findViewById(R.id.email_sign_in_btn);
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = (ImageView) findViewById(R.id.login_progress);
         mProgressTextView = (TextView) findViewById(R.id.text_progress);
+        mEmailEditText = (EditText) findViewById(R.id.email);
+        mPasswordEditText = (EditText) findViewById(R.id.password);
 
-        Button RefreshButton = (Button) findViewById(R.id.refresh_btn);
+        Button mGoogleButton = (Button) findViewById(R.id.google_sign_in_btn);
+        Button mFacebookButton = (Button) findViewById(R.id.fb_sign_in_btn);
+        Button mRegisterButton = (Button) findViewById(R.id.email_sign_up_btn);
+        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_btn);
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -112,6 +112,34 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
+
+        /**
+         * Setting up Sign In with Email.
+         */
+        mEmailSignInButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String email = mEmailEditText.getText().toString().trim();
+                String password = mPasswordEditText.getText().toString().trim();
+                signInWithEmail(email, password);
+                FirebaseUser user = mAuth.getCurrentUser();
+                if (!user.isEmailVerified()){
+                    //TODO this case arises when the registration of the particular user was dropped halfway.
+                    Log.d(LOG_TAG, "SignInWithEmail: Email not verified.");
+                    Toast.makeText(LoginActivity.this, "Your registration met with an error.", Toast.LENGTH_SHORT).show();
+                    user.delete()
+                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Void> task) {
+                                    if (task.isSuccessful()){
+                                        Toast.makeText(LoginActivity.this, "Please register again.", Toast.LENGTH_SHORT).show();
+
+                                    }
+                                }
+                            });
+                }
+            }
+        });
 
         /**
          * Setting up Facebook sign in.
@@ -165,17 +193,30 @@ public class LoginActivity extends AppCompatActivity {
         });
 
 
-        RefreshButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                FirebaseUser user = mAuth.getCurrentUser();
-                user.reload();
-                mTextView.setText("" + user.isEmailVerified());
-            }
-        });
 
     }
 
+
+    /**
+     * Signs in with email
+     * @param email Email ID
+     * @param password Password
+     */
+    private void signInWithEmail(String email, String password){
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()){
+                            Log.d(LOG_TAG, "signInWithEmail: Sign In successful");
+                        } else {
+                            Log.d(LOG_TAG, "signInWithEmail: Sign In Failed");
+
+                        }
+                    }
+                });
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {

@@ -186,7 +186,7 @@ public class LoginActivity extends AppCompatActivity {
         mRegisterButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(LoginActivity.this, EmailLoginActivity.class);
+                Intent intent = new Intent(LoginActivity.this, RegistrationActivity.class);
                 intent.putExtra(ACTIVITY_MODE, ACTIVITY_EMAIL_CREATE);
                 startActivityForResult(intent, RC_EMAIL_SIGN_IN);
             }
@@ -210,8 +210,12 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()){
                             Log.d(LOG_TAG, "signInWithEmail: Sign In successful");
+
+                            setResult(RESULT_OK);
+                            finish();
                         } else {
                             Log.d(LOG_TAG, "signInWithEmail: Sign In Failed");
+                            setResult(RESULT_CANCELED);
 
                         }
                     }
@@ -237,9 +241,12 @@ public class LoginActivity extends AppCompatActivity {
                 mProgressTextView.setText("Integrating with Firebase");
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account);
+
             } catch (Exception e) {
                 Toast.makeText(LoginActivity.this, "Authentication failed.",
                         Toast.LENGTH_SHORT).show();
+
+                setResult(RESULT_CANCELED);
             }
 
         }
@@ -251,12 +258,22 @@ public class LoginActivity extends AppCompatActivity {
             if (resultCode == RESULT_OK) {
                 //Email Sign in success.
                 //TODO: do stuff.
+
+                setResult(RESULT_OK);
+                finish();
+
             }
 
         }
 
-        if (requestCode == RC_REGISTER)
+        if (requestCode == RC_REGISTER){
             showProgress(false);
+            if (resultCode == RESULT_OK){
+                setResult(RESULT_OK);
+                finish();
+            }
+        }
+
     }
 
 
@@ -312,6 +329,7 @@ public class LoginActivity extends AppCompatActivity {
                             Log.w(LOG_TAG, "signInWithCredential", task.getException());
                             Toast.makeText(LoginActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_CANCELED);
                         } else {
                             mProgressTextView.setText("Getting ready to collect data");
                             showProgress(true);
@@ -373,7 +391,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (!dataSnapshot.child(user.getUid()).exists()) {
-                    Intent intent = new Intent(LoginActivity.this, EmailLoginActivity.class);
+                    Intent intent = new Intent(LoginActivity.this, RegistrationActivity.class);
                     String name, email;
                     name = user.getDisplayName();
                     email = user.getEmail();
@@ -381,8 +399,11 @@ public class LoginActivity extends AppCompatActivity {
                     intent.putExtra("email", email);
                     intent.putExtra(ACTIVITY_MODE, ACTIVITY_REGISTER);
                     startActivityForResult(intent, RC_REGISTER);
-                } else
+                } else{
                     showProgress(false);
+                    setResult(RESULT_OK);
+                    finish();
+                }
             }
 
             @Override

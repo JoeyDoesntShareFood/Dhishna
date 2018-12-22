@@ -2,14 +2,11 @@ package com.example.jyothisp.dhishna;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.annotation.TargetApi;
-import android.content.Intent;
 
 import android.app.Activity;
 
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.graphics.drawable.Animatable2Compat;
@@ -24,7 +21,6 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -35,14 +31,13 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 /**
  * A login screen that offers login via email/password.
  */
-public class EmailLoginActivity extends Activity {
+public class RegistrationActivity extends Activity {
 
 
     // UI references.
@@ -58,14 +53,14 @@ public class EmailLoginActivity extends Activity {
 
     private FirebaseUser firebaseUser;
 
-    private static final String LOG_TAG = "EmailLoginActivity";
+    private static final String LOG_TAG = "RegistrationActivity";
     private static final String ACTIVITY_MODE = "ACTIVITY_MODE";
     private RadioGroup mGenderGroup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_email_login);
+        setContentView(R.layout.activity_registration);
 
         // Set up the UI elements.
         mNameView = (EditText) findViewById(R.id.name);
@@ -128,9 +123,9 @@ public class EmailLoginActivity extends Activity {
      * If there are form errors (invalid email, missing fields, etc.), the
      * errors are presented and no actual login attempt is made.
      *
-     * @param hasPassword this is true only for the case of a new Registration.
+     * @param needsPassword this is true only for the case of a new Registration.
      */
-    private void attemptRegistration(boolean hasPassword) {
+    private void attemptRegistration(boolean needsPassword) {
 
         // Reset errors.
         mEmailView.setError(null);
@@ -150,7 +145,7 @@ public class EmailLoginActivity extends Activity {
         boolean cancel = false;
         View focusView = null;
 
-        if (hasPassword) {
+        if (needsPassword) {
             mPasswordView.setError(null);
             password = mPasswordView.getText().toString();
 
@@ -199,7 +194,7 @@ public class EmailLoginActivity extends Activity {
 
             final DhishnaUser dhishnaUser = new DhishnaUser(name, email, phone, gender, institute);
 
-            if (hasPassword)
+            if (needsPassword)
                 createEmailAccount(password, dhishnaUser);
             else {
                 mProgressTextView.setText("Pushing to Database");
@@ -245,7 +240,7 @@ public class EmailLoginActivity extends Activity {
                                 pushToDBandExit(dhishnaUser);
                             } else {
                                 Log.d(LOG_TAG, "emailVerification: Email still not verified.");
-                                Toast.makeText(EmailLoginActivity.this, "Click the link in your mail.", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(RegistrationActivity.this, "Click the link in your mail.", Toast.LENGTH_SHORT).show();
                             }
                         }
                     });
@@ -275,7 +270,7 @@ public class EmailLoginActivity extends Activity {
                     // If sign in fails, display a message to the user.
                     Log.w(LOG_TAG, "createUserWithEmail:failure", task.getException());
 
-                    Toast.makeText(EmailLoginActivity.this, "Authentication failed.",
+                    Toast.makeText(RegistrationActivity.this, "Authentication failed.",
                             Toast.LENGTH_SHORT).show();
                     setResult(RESULT_CANCELED);
                     finish();
